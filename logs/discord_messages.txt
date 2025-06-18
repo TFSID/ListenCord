@@ -1,0 +1,30 @@
+{
+  "type": "NEW",
+  "timestamp": "2025-06-18T09:49:33.022935",
+  "server": "TFS's server",
+  "server_id": 1204261574865326150,
+  "channel": "temp-notes",
+  "channel_id": 1212184871099826186,
+  "author": "iam_tfs",
+  "author_id": 432351271152910346,
+  "content": "halloo",
+  "attachments": [],
+  "embeds": 0,
+  "reactions": 0
+}
+==================================================
+{
+  "type": "NEW",
+  "timestamp": "2025-06-18T09:49:35.603769",
+  "server": "TFS's server",
+  "server_id": 1204261574865326150,
+  "channel": "temp-notes",
+  "channel_id": 1212184871099826186,
+  "author": "iam_tfs",
+  "author_id": 432351271152910346,
+  "content": "hehe",
+  "attachments": [],
+  "embeds": 0,
+  "reactions": 0
+}
+==================================================

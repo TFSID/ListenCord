@@ -1,0 +1,30 @@
+services:
+  discord-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # target: development
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    environment:
+      - LOG_LEVEL=DEBUG
+      - PYTHONDONTWRITEBYTECODE=1
+    command: python -u app.py
+    stdin_open: true
+    tty: true
+
+  socket-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    volumes:
+      - ./client:/app/client
+      - ./utils:/app/utils
+    command: python -u run_client.py discord-bot 8888
+    stdin_open: true
+    tty: true
+
+networks:
+  default:
+    name: discord-network-dev

@@ -1,0 +1,9 @@
+.venv
+.venv/*
+__pycache__
+*.pyc
+.venv**
+.venv*
+experimental/main.py
+.env
+.env
