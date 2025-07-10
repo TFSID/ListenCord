@@ -1,0 +1,3 @@
+needs frontend for fetching data from monitored_channels.json and discord_messages.txt logs and also the control panel for controlling my discord bot using discord command
+
+i need the details for monitored channels and another components for showing messages logs

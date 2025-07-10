@@ -1,9 +1,45 @@
 import os
+import logging
+import asyncio
 from dataclasses import dataclass
 from typing import Optional
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, OperationFailure
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
+
+@dataclass
+class MongoDBConfig:
+    """Configuration untuk MongoDB"""
+    uri: str
+    database_name: str = "discord_bot"
+    collection_name: str = "messages"
+    timeout: int = 5000
+    enable_mongodb: bool = True
+
+    @classmethod
+    def from_env(cls) -> 'MongoDBConfig':
+        """Create config from environment variables"""
+        return cls(
+            uri=os.getenv('MONGODB_URI', 'mongodb://localhost:27017/'),
+            database_name=os.getenv('MONGODB_DATABASE', 'discord_bot'),
+            collection_name=os.getenv('MONGODB_COLLECTION', 'messages'),
+            timeout=int(os.getenv('MONGODB_TIMEOUT', '5000')),
+            enable_mongodb=os.getenv('ENABLE_MONGODB', 'true').lower() == 'true'
+        )
+    
+    # @classmethod
+    # def from_dict(cls, config_dict: dict) -> 'MongoDBConfig':
+    #     """Create config dari dictionary"""
+    #     return MongoDBConfig(
+    #         uri=os.getenv('MONGODB_URI', 'mongodb://localhost:27017/'),
+    #         database_name=os.getenv('MONGODB_DATABASE', 'discord_bot'),
+    #         collection_name=os.getenv('MONGODB_COLLECTION', 'messages'),
+    #         timeout=int(os.getenv('MONGODB_TIMEOUT', '5000')),
+    #         enable_mongodb=os.getenv('ENABLE_MONGODB', 'true').lower() == 'true'
+    #     )
 
 @dataclass
 class BotConfig:

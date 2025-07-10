@@ -4,9 +4,6 @@ from typing import Set, List, Callable, Awaitable, Optional
 from models.message import DiscordMessage
 from utils.logger import Logger
 from services.mongo_handler import MongoDBService
-from datetime import datetime
-from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, OperationFailure
-
 
 class MessageProcessor:
     """Service untuk memproses dan mendistribusikan pesan Discord"""
@@ -22,39 +19,28 @@ class MessageProcessor:
             mongodb_service: Optional MongoDB service instance
         """
         self.message_log_file = message_log_file
-        self.mongodb_service = mongodb_service
         self.logger = Logger.get_logger(self.__class__.__name__)
         self.broadcasters: List[Callable[[DiscordMessage], Awaitable[None]]] = []
         
         # Ensure log directory exists
         Path(message_log_file).parent.mkdir(parents=True, exist_ok=True)
-
-        self.logger.info("Initializing message processor...")
-
-        # if self.mongodb_service:
-        #     self.logger.info("MongoDB service provided, will log messages to database")
-        #     if self.mongodb_service.is_available:
-        #         self.logger.info("MongoDB service is available")
-        # else:
-        #     self.logger.warning("No MongoDB service provided, will log messages to file only")
     
     def add_broadcaster(self, broadcaster: Callable[[DiscordMessage], Awaitable[None]]):
         """Tambah broadcaster function"""
         self.broadcasters.append(broadcaster)
 
     async def initialize(self):
-        pass
-        # """Initialize message processor"""
-        # self.logger.info("Initializing message processor...")
+        """Initialize message processor"""
+        self.logger.info("Initializing message processor...")
         
-        # if self.mongodb_service:
-        #     await self.mongodb_service.initialize()
-        #     if self.mongodb_service.is_available:
-        #         self.logger.info("MongoDB service initialized successfully")
-        #     else:
-        #         self.logger.warning("MongoDB service not available, using file logging only")
-        # else:
-        #     self.logger.info("No MongoDB service provided, using file logging only")
+        if self.mongodb_service:
+            await self.mongodb_service.initialize()
+            if self.mongodb_service.is_available:
+                self.logger.info("MongoDB service initialized successfully")
+            else:
+                self.logger.warning("MongoDB service not available, using file logging only")
+        else:
+            self.logger.info("No MongoDB service provided, using file logging only")
     
     def remove_broadcaster(self, broadcaster: Callable[[DiscordMessage], Awaitable[None]]):
         """Hapus broadcaster function"""
@@ -66,24 +52,6 @@ class MessageProcessor:
         try:
             # Create message model
             message_data = DiscordMessage.from_discord_message(discord_message, message_type)
-
-            # Try to save ke database first
-
-            try:
-                # Cek apakah MongoDB service tersedia
-                # if not self.mongodb_service or not self.mongodb_service.is_available:
-                #     raise ConnectionFailure("MongoDB service is not available")
-                await self._log_to_database(message_data)
-                self.logger.debug(f"Message saved to MongoDB: {message_data.channel_id} at {message_data.timestamp}")
-                # self._messages_saved += 1
-            except Exception as e:
-                self.logger.error(f"Error saving to database: {e}")
-                self.logger.warning(
-                    f"Failed to save message to database, falling back to file logging: {self.mongodb_service._last_error}"
-                )
-                # self._errors += 1
-                database_success = False
-                await self._log_to_file(message_data)
             
             # Log ke file
             await self._log_to_file(message_data)
@@ -100,24 +68,6 @@ class MessageProcessor:
         except Exception as e:
             self.logger.error(f"Error processing message: {e}")
     
-    async def _log_to_database(self, message_data: 'DiscordMessage') -> bool:
-        """Log message data ke MongoDB"""
-        # if not self.mongodb_service or not self.mongodb_service.is_available:
-        #     self.logger.warning("MongoDB service not available, skipping database logging")
-        #     return False
-            
-        try:
-            success = await self.mongodb_service.save_message(message_data)
-            if success:
-                # self._db_saves += 1
-                self.logger.debug(f"Message saved to MongoDB: {message_data.channel_id} at {message_data.timestamp}")
-            return success
-        
-        except Exception as e:
-            self.logger.error(f"Error saving to database: {e}")
-            # self._errors += 1
-            return False
-        
     async def _log_to_file(self, message_data: DiscordMessage) -> None:
         """Log message data ke file"""
         try:

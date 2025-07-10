@@ -1,3 +1,5 @@
 discord.py>=2.3.0
 asyncio
 python-dotenv
+pymongo
+motor

@@ -1,5 +1,7 @@
 import asyncio
 from config import Config
+from config import MongoDBConfig
+from services.mongo_handler import MongoDBService
 from services.discord_bot import DiscordBot
 from services.channel_manager import ChannelManager
 from services.message_processor import MessageProcessor
@@ -12,14 +14,17 @@ class DiscordSocketListener:
     def __init__(self):
         # Load configuration
         self.bot_config, self.socket_config = Config.from_env()
+        self.mongodb_config = MongoDBConfig.from_env()
+        self.mongodb_service = MongoDBService(self.mongodb_config)
         self.logger = Logger.get_logger(self.__class__.__name__, 
                                        self.bot_config.log_file, 
                                        self.bot_config.log_level)
         
         # Initialize services
         self.channel_manager = ChannelManager()
-        self.message_processor = MessageProcessor(self.bot_config.message_log_file)
+        self.message_processor = MessageProcessor(self.bot_config.message_log_file, mongodb_service=self.mongodb_service)
         self.socket_server = SocketServer(self.socket_config)
+        
         self.discord_bot = DiscordBot(
             self.bot_config,
             self.channel_manager,

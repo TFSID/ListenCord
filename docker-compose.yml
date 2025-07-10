@@ -19,6 +19,7 @@ services:
       - ./monitored_channels.json:/app/monitored_channels.json
     networks:
       - discord-network
+      - database-instance_mongo-db  # Connect to external MongoDB instance
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost', 8888)); s.close()"]
       interval: 30s
@@ -45,6 +46,7 @@ services:
       - SOCKET_PORT=8888
     networks:
       - discord-network
+      - database-instance_mongo-db  # Connect to external MongoDB instance
     depends_on:
       discord-bot:
         condition: service_healthy
@@ -64,6 +66,7 @@ services:
       - redis_data:/data
     networks:
       - discord-network
+      - database-instance_mongo-db
     command: redis-server --appendonly yes
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -122,7 +125,7 @@ services:
     container_name: discord-grafana
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "4000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
@@ -138,6 +141,8 @@ networks:
   discord-network:
     driver: bridge
     name: discord-network
+  database-instance_mongo-db:
+    external: true
 
 volumes:
   redis_data:
