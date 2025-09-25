@@ -1,0 +1,989 @@
+// Update message statistics
+        function updateMessageStats() {
+            const totalMessages = messagesData.length;
+            const today = new Date().toDateString();
+            const todayMessages = messagesData.filter(msg => {
+                const messageObj = parseMessage(msg);
+                return messageObj.timestamp && new Date(messageObj.timestamp).toDateString() === today;
+            }).length;
+
+            // Calculate unique users
+            const uniqueUsers = new Set();
+            messagesData.forEach(msg => {
+                const messageObj = parseMessage(msg);
+                if (messageObj.user) {
+                    uniqueUsers.add(messageObj.user);
+                }
+            });
+
+            // Calculate average messages per hour (last 24 hours)
+            const last24Hours = messagesData.filter(msg => {
+                const messageObj = parseMessage(msg);
+                if (!messageObj.timestamp) return false;
+                const messageTime = new Date(messageObj.timestamp);
+                const now = new Date();
+                return (now - messageTime) <= 24 * 60 * 60 * 1000;
+            }).length;
+
+            const averagePerHour = Math.round(last24Hours / 24);
+
+            document.getElementById('totalMessages').textContent = totalMessages;
+            document.getElementById('todayMessages').textContent = todayMessages;
+            document.getElementById('uniqueUsers').textContent = uniqueUsers.size;
+            document.getElementById('averagePerHour').textContent = averagePerHour;
+        }<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .control-panel {
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .data-display {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+        }
+
+        .channel-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .channel-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .channel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .channel-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2d3748;
+            margin: 0;
+        }
+
+        .channel-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: #c6f6d5;
+            color: #276749;
+        }
+
+        .status-inactive {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .channel-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .channel-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .channel-info label {
+            font-size: 0.8rem;
+            color: #718096;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .channel-info span {
+            font-size: 0.9rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .channel-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        .message-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 3px solid #48bb78;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .message-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .message-user {
+            font-weight: bold;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        .message-timestamp {
+            color: #718096;
+            font-size: 0.8rem;
+        }
+
+        .message-content {
+            color: #2d3748;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .message-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #718096;
+        }
+
+        .message-channel {
+            background: #edf2f7;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .message-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logs-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #48bb78;
+            animation: pulse 2s infinite;
+        }
+
+        .status-offline {
+            background: #f56565;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(72, 187, 120, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(72, 187, 120, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(72, 187, 120, 0);
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .channel-details {
+                grid-template-columns: 1fr;
+            }
+
+            .message-filters {
+                flex-direction: column;
+            }
+
+            .logs-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Discord Bot Dashboard</h1>
+            <p>Monitor channels, view messages, and control your Discord bot</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Bot Status & Control Panel -->
+            <div class="card control-panel">
+                <h2>🎮 Bot Control Panel</h2>
+                
+                <div class="form-group">
+                    <label>Bot Status:</label>
+                    <div>
+                        <span class="status-indicator status-online" id="botStatus"></span>
+                        <span id="botStatusText">Online</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="commandType">Command Type:</label>
+                    <select id="commandType">
+                        <option value="message">Send Message</option>
+                        <option value="announcement">Send Announcement</option>
+                        <option value="moderation">Moderation Action</option>
+                        <option value="channel">Channel Management</option>
+                        <option value="role">Role Management</option>
+                        <option value="custom">Custom Command</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="targetChannel">Target Channel:</label>
+                    <select id="targetChannel">
+                        <option value="">Select Channel</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="commandInput">Command/Message:</label>
+                    <textarea id="commandInput" rows="3" placeholder="Enter your command or message here..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn" onclick="sendCommand()">Execute Command</button>
+                    <button class="btn btn-success" onclick="refreshData()">Refresh Data</button>
+                    <button class="btn btn-danger" onclick="toggleBot()">Toggle Bot</button>
+                </div>
+
+                <div id="commandResult"></div>
+            </div>
+
+            <!-- Monitored Channels Details -->
+            <div class="card">
+                <h2>📺 Monitored Channels</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalChannels">0</div>
+                        <div class="stat-label">Total Channels</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="activeChannels">0</div>
+                        <div class="stat-label">Active Channels</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="textChannels">0</div>
+                        <div class="stat-label">Text Channels</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="voiceChannels">0</div>
+                        <div class="stat-label">Voice Channels</div>
+                    </div>
+                </div>
+                <div id="channelsData" class="data-display">
+                    <div class="loading">Loading channels...</div>
+                </div>
+            </div>
+
+            <!-- Message Logs Component -->
+            <div class="card">
+                <div class="logs-header">
+                    <h2>📝 Message Logs</h2>
+                    <div class="logs-actions">
+                        <button class="btn btn-small" onclick="exportLogs()">Export Logs</button>
+                        <button class="btn btn-small" onclick="clearLogs()">Clear Logs</button>
+                    </div>
+                </div>
+                
+                <div class="message-filters">
+                    <input type="text" class="filter-input" id="userFilter" placeholder="Filter by user...">
+                    <input type="text" class="filter-input" id="channelFilter" placeholder="Filter by channel...">
+                    <input type="date" class="filter-input" id="dateFilter">
+                    <select class="filter-input" id="logTypeFilter">
+                        <option value="">All Types</option>
+                        <option value="message">Messages</option>
+                        <option value="join">User Joins</option>
+                        <option value="leave">User Leaves</option>
+                        <option value="edit">Message Edits</option>
+                        <option value="delete">Message Deletes</option>
+                    </select>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalMessages">0</div>
+                        <div class="stat-label">Total Messages</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="todayMessages">0</div>
+                        <div class="stat-label">Today's Messages</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="uniqueUsers">0</div>
+                        <div class="stat-label">Unique Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="averagePerHour">0</div>
+                        <div class="stat-label">Avg/Hour</div>
+                    </div>
+                </div>
+
+                <div id="messagesData" class="data-display">
+                    <div class="loading">Loading messages...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        let botOnline = true;
+        let channelsData = [];
+        let messagesData = [];
+        let filteredMessages = [];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadChannelsData();
+            loadMessagesData();
+            updateBotStatus();
+            setupFilters();
+        });
+
+        // Setup message filters
+        function setupFilters() {
+            const userFilter = document.getElementById('userFilter');
+            const channelFilter = document.getElementById('channelFilter');
+            const dateFilter = document.getElementById('dateFilter');
+            const logTypeFilter = document.getElementById('logTypeFilter');
+
+            [userFilter, channelFilter, dateFilter, logTypeFilter].forEach(filter => {
+                filter.addEventListener('input', applyFilters);
+            });
+        }
+
+        // Apply message filters
+        function applyFilters() {
+            const userFilter = document.getElementById('userFilter').value.toLowerCase();
+            const channelFilter = document.getElementById('channelFilter').value.toLowerCase();
+            const dateFilter = document.getElementById('dateFilter').value;
+            const logTypeFilter = document.getElementById('logTypeFilter').value;
+
+            filteredMessages = messagesData.filter(message => {
+                const messageObj = parseMessage(message);
+                
+                let matchesUser = !userFilter || 
+                    (messageObj.user && messageObj.user.toLowerCase().includes(userFilter));
+                
+                let matchesChannel = !channelFilter || 
+                    (messageObj.channel && messageObj.channel.toLowerCase().includes(channelFilter));
+                
+                let matchesDate = !dateFilter || 
+                    (messageObj.timestamp && messageObj.timestamp.includes(dateFilter));
+                
+                let matchesType = !logTypeFilter || 
+                    (messageObj.type && messageObj.type === logTypeFilter);
+
+                return matchesUser && matchesChannel && matchesDate && matchesType;
+            });
+
+            displayMessages();
+        }
+
+        // Parse message string to extract components
+        function parseMessage(messageString) {
+            // Try to parse different log formats
+            const patterns = [
+                // Discord bot message format: [timestamp] [channel] username: message
+                /^\[([^\]]+)\] \[([^\]]+)\] ([^:]+): (.+)$/,
+                // Simple format: timestamp username message
+                /^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) ([^\s]+) (.+)$/,
+                // JSON format
+                /^{.*}$/
+            ];
+
+            for (let pattern of patterns) {
+                const match = messageString.match(pattern);
+                if (match) {
+                    if (pattern === patterns[0]) {
+                        return {
+                            timestamp: match[1],
+                            channel: match[2],
+                            user: match[3],
+                            content: match[4],
+                            type: 'message'
+                        };
+                    } else if (pattern === patterns[1]) {
+                        return {
+                            timestamp: match[1],
+                            user: match[2],
+                            content: match[3],
+                            type: 'message'
+                        };
+                    } else if (pattern === patterns[2]) {
+                        try {
+                            return JSON.parse(messageString);
+                        } catch (e) {
+                            return { content: messageString, type: 'unknown' };
+                        }
+                    }
+                }
+            }
+
+            // Fallback for unparseable messages
+            return {
+                content: messageString,
+                type: 'unknown',
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        // Load monitored channels data
+        async function loadChannelsData() {
+            try {
+                const response = await fetch('monitored_channels.json');
+                if (!response.ok) throw new Error('Failed to load channels');
+                
+                const data = await response.json();
+                channelsData = Array.isArray(data) ? data : Object.values(data);
+                displayChannels();
+                updateChannelStats();
+                populateChannelSelect();
+            } catch (error) {
+                document.getElementById('channelsData').innerHTML = 
+                    `<div class="error">Error loading channels: ${error.message}</div>`;
+            }
+        }
+
+        // Load messages data
+        async function loadMessagesData() {
+            try {
+                const response = await fetch('discord_messages.txt');
+                if (!response.ok) throw new Error('Failed to load messages');
+                
+                const text = await response.text();
+                messagesData = text.split('\n').filter(line => line.trim());
+                displayMessages();
+                updateMessageStats();
+            } catch (error) {
+                document.getElementById('messagesData').innerHTML = 
+                    `<div class="error">Error loading messages: ${error.message}</div>`;
+            }
+        }
+
+        // Display channels with detailed information
+        function displayChannels() {
+            const container = document.getElementById('channelsData');
+            if (!channelsData || channelsData.length === 0) {
+                container.innerHTML = '<div class="error">No channels found</div>';
+                return;
+            }
+
+            container.innerHTML = channelsData.map(channel => {
+                const isActive = channel.active !== false;
+                const channelType = channel.type || 'text';
+                
+                return `
+                    <div class="channel-item">
+                        <div class="channel-header">
+                            <h3 class="channel-name"># ${channel.name || channel.channel_name || 'Unknown Channel'}</h3>
+                            <span class="channel-status ${isActive ? 'status-active' : 'status-inactive'}">
+                                ${isActive ? 'Active' : 'Inactive'}
+                            </span>
+                        </div>
+                        
+                        <div class="channel-details">
+                            <div class="channel-info">
+                                <label>Channel ID</label>
+                                <span>${channel.id || channel.channel_id || 'N/A'}</span>
+                            </div>
+                            <div class="channel-info">
+                                <label>Channel Type</label>
+                                <span>${channelType.charAt(0).toUpperCase() + channelType.slice(1)}</span>
+                            </div>
+                            <div class="channel-info">
+                                <label>Guild/Server</label>
+                                <span>${channel.guild || channel.guild_name || channel.server_name || 'N/A'}</span>
+                            </div>
+                            <div class="channel-info">
+                                <label>Members</label>
+                                <span>${channel.member_count || channel.members || 'N/A'}</span>
+                            </div>
+                            <div class="channel-info">
+                                <label>Created</label>
+                                <span>${channel.created_at || channel.created || 'N/A'}</span>
+                            </div>
+                            <div class="channel-info">
+                                <label>Last Activity</label>
+                                <span>${channel.last_message_at || channel.last_activity || 'N/A'}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="channel-actions">
+                            <button class="btn btn-small" onclick="toggleChannelMonitoring('${channel.id || channel.channel_id}')">
+                                ${isActive ? 'Disable' : 'Enable'} Monitoring
+                            </button>
+                            <button class="btn btn-small btn-success" onclick="viewChannelMessages('${channel.id || channel.channel_id}')">
+                                View Messages
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Display messages with enhanced formatting
+        function displayMessages() {
+            const container = document.getElementById('messagesData');
+            const messagesToShow = filteredMessages.length > 0 ? filteredMessages : messagesData;
+            
+            if (!messagesToShow || messagesToShow.length === 0) {
+                container.innerHTML = '<div class="error">No messages found</div>';
+                return;
+            }
+
+            const recentMessages = messagesToShow.slice(-50).reverse();
+            
+            container.innerHTML = recentMessages.map(message => {
+                const messageObj = parseMessage(message);
+                const timestamp = new Date(messageObj.timestamp || Date.now()).toLocaleString();
+                
+                return `
+                    <div class="message-item">
+                        <div class="message-header">
+                            <span class="message-user">${messageObj.user || 'Unknown User'}</span>
+                            <span class="message-timestamp">${timestamp}</span>
+                        </div>
+                        <div class="message-content">${messageObj.content || message}</div>
+                        <div class="message-meta">
+                            <span class="message-channel">${messageObj.channel || 'Unknown Channel'}</span>
+                            <span>Type: ${messageObj.type || 'message'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Update channel statistics
+        function updateChannelStats() {
+            const totalChannels = channelsData.length;
+            const activeChannels = channelsData.filter(ch => ch.active !== false).length;
+            const textChannels = channelsData.filter(ch => (ch.type || 'text') === 'text').length;
+            const voiceChannels = channelsData.filter(ch => (ch.type || 'text') === 'voice').length;
+            
+            document.getElementById('totalChannels').textContent = totalChannels;
+            document.getElementById('activeChannels').textContent = activeChannels;
+            document.getElementById('textChannels').textContent = textChannels;
+            document.getElementById('voiceChannels').textContent = voiceChannels;
+        }
+
+        // Update message statistics
+        function updateMessageStats() {
+            const totalMessages = messagesData.length;
+            const today = new Date().toDateString();
+            const todayMessages = messagesData.filter(msg => 
+                msg.includes(today) || msg.includes(new Date().toISOString().split('T')[0])
+            ).length;
+
+            document.getElementById('totalMessages').textContent = totalMessages;
+            document.getElementById('todayMessages').textContent = todayMessages;
+        }
+
+        // Populate channel select dropdown
+        function populateChannelSelect() {
+            const select = document.getElementById('targetChannel');
+            select.innerHTML = '<option value="">Select Channel</option>';
+            
+            channelsData.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.id || channel.channel_id;
+                option.textContent = channel.name || channel.channel_name || 'Unknown Channel';
+                select.appendChild(option);
+            });
+        }
+
+        // Send command to bot
+        async function sendCommand() {
+            const commandType = document.getElementById('commandType').value;
+            const targetChannel = document.getElementById('targetChannel').value;
+            const commandInput = document.getElementById('commandInput').value;
+
+            if (!commandInput.trim()) {
+                showResult('Please enter a command or message', 'error');
+                return;
+            }
+
+            const command = {
+                type: commandType,
+                channel: targetChannel,
+                content: commandInput,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                // Simulate API call to bot
+                showResult('Command sent successfully! (Simulated)', 'success');
+                
+                // In a real implementation, you would send this to your bot's API
+                // const response = await fetch('/api/bot/command', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify(command)
+                // });
+                
+                // Clear input
+                document.getElementById('commandInput').value = '';
+            } catch (error) {
+                showResult(`Error sending command: ${error.message}`, 'error');
+            }
+        }
+
+        // Toggle bot online/offline
+        function toggleBot() {
+            botOnline = !botOnline;
+            updateBotStatus();
+            showResult(`Bot ${botOnline ? 'enabled' : 'disabled'} successfully!`, 'success');
+        }
+
+        // Update bot status display
+        function updateBotStatus() {
+            const statusIndicator = document.getElementById('botStatus');
+            const statusText = document.getElementById('botStatusText');
+            
+            if (botOnline) {
+                statusIndicator.className = 'status-indicator status-online';
+                statusText.textContent = 'Online';
+            } else {
+                statusIndicator.className = 'status-indicator status-offline';
+                statusText.textContent = 'Offline';
+            }
+        }
+
+        // Show command result
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('commandResult');
+            resultDiv.innerHTML = `
+                <div class="result ${type === 'error' ? 'error' : ''}" style="
+                    background: ${type === 'error' ? '#fed7d7' : '#c6f6d5'};
+                    color: ${type === 'error' ? '#c53030' : '#276749'};
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin-top: 15px;
+                ">
+                    ${message}
+                </div>
+            `;
+            
+            // Clear result after 5 seconds
+            setTimeout(() => {
+                resultDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // Refresh all data
+        function refreshData() {
+            loadChannelsData();
+            loadMessagesData();
+            showResult('Data refreshed successfully!', 'success');
+        }
+
+        // Auto-refresh data every 30 seconds
+        setInterval(refreshData, 30000);
+    </script>
+</body>
+</html>
+
+        // Channel management functions
+        function toggleChannelMonitoring(channelId) {
+            const channel = channelsData.find(ch => (ch.id || ch.channel_id) === channelId);
+            if (channel) {
+                channel.active = !channel.active;
+                displayChannels();
+                updateChannelStats();
+                showResult(`Channel monitoring ${channel.active ? 'enabled' : 'disabled'} for ${channel.name || 'Unknown Channel'}`, 'success');
+            }
+        }
+
+        function viewChannelMessages(channelId) {
+            const channel = channelsData.find(ch => (ch.id || ch.channel_id) === channelId);
+            if (channel) {
+                document.getElementById('channelFilter').value = channel.name || channel.channel_name || '';
+                applyFilters();
+                showResult(`Filtered messages for channel: ${channel.name || 'Unknown Channel'}`, 'success');
+            }
+        }
+
+        // Message log functions
+        function exportLogs() {
+            const logs = filteredMessages.length > 0 ? filteredMessages : messagesData;
+            const logContent = logs.map(msg => {
+                const messageObj = parseMessage(msg);
+                return `${messageObj.timestamp || new Date().toISOString()}\t${messageObj.user || 'Unknown'}\t${messageObj.channel || 'Unknown'}\t${messageObj.content || msg}`;
+            }).join('\n');
+
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `discord_logs_${new Date().toISOString().split('T')[0]}.txt`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            showResult('Logs exported successfully!', 'success');
+        }
+
+        function clearLogs() {
+            if (confirm('Are you sure you want to clear all message logs? This action cannot be undone.')) {
+                messagesData = [];
+                filteredMessages = [];
+                displayMessages();
+                updateMessageStats();
+                showResult('Message logs cleared successfully!', 'success');
+            }
+        }
+    </script>
+</body>
+</html>
